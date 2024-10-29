@@ -8,6 +8,7 @@ from ibm_watsonx_ai import Credentials
 from ibm_watsonx_ai.foundation_models import Model, ModelInference
 from ibm_watsonx_ai.metanames import GenTextParamsMetaNames as GenParams
 from ibm_watsonx_ai.foundation_models.utils.enums import ModelTypes, DecodingMethods
+from dotenv import load_dotenv
 
 import os
 import http.client #token
@@ -17,6 +18,9 @@ import requests #chroma
 
 
 import time #measuring the time
+
+
+load_dotenv()  # take environment variables from .env.
 
 
 
