@@ -1,0 +1,220 @@
+from urllib import request
+from pydantic import BaseModel
+from fastapi import FastAPI, Request, HTTPException, BackgroundTasks
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse, JSONResponse, RedirectResponse
+from ibm_watsonx_ai import APIClient
+from ibm_watsonx_ai import Credentials
+from ibm_watsonx_ai.foundation_models import Model, ModelInference
+from ibm_watsonx_ai.metanames import GenTextParamsMetaNames as GenParams
+from ibm_watsonx_ai.foundation_models.utils.enums import ModelTypes, DecodingMethods
+
+import os
+import http.client #token
+import json #token
+
+import requests #chroma
+
+
+import time #measuring the time
+
+
+
+# load the environment variables
+# get the IAM API Key from the environment variable    
+iam_api_key = os.environ["WATSONX_IAM_APIKEY"]
+#print(f"iam api key: {iam_api_key}")
+
+watsonx_project_id = os.environ["WATSONX_PROJECT_ID"]
+api_url = os.environ["WATSONX_API_URL"]
+model_id = os.environ["WATSONX_MODEL_ID"]
+
+
+number_of_responses_for_genai = int(os.environ["NUMBER_OF_RESPONSES_FOR_GENAI"])
+retriver_discovery_or_chroma = os.environ["RETRIVER"]
+json_chroma_for_wd_project = os.environ["CHROMA_FOR_WD_PROJECT"]
+
+retriver_chroma_url = os.environ["CHROMA_URL"]
+
+generate_params = {
+    GenParams.MAX_NEW_TOKENS: 3000,
+    GenParams.DECODING_METHOD: "greedy",
+    GenParams.REPETITION_PENALTY: 1
+}
+
+watsonx_project_id=os.environ["WATSONX_PROJECT_ID"]
+
+credentials=Credentials(
+    api_key = iam_api_key, #WX_API_KEY,
+    url = api_url #IBM_CLOUD_URL
+    )
+print(credentials)
+
+client=APIClient(credentials)
+client_project = APIClient(credentials, project_id = watsonx_project_id)
+
+
+
+MODEL_ID = model_id #"ibm/granite-8b-code-instruct" #"mistralai/mixtral-8x7b-instruct-v01"
+
+
+
+
+# Initialize the app and add CORS middleware
+app = FastAPI()
+#app.add_middleware(
+#    CORSMiddleware,
+#    allow_origins=['*'],
+#    allow_credentials=True,
+#    allow_methods=['*'],
+#    allow_headers=["*"]
+#)
+
+
+# code that connects to chromaDB API service per project;
+def retrive_chroma(query, project_id):
+
+
+    #select the container to ping
+    url = retriver_chroma_url
+
+    # pick the url by project_id use-case
+
+    print("in retriver:")
+    # connect to the container
+    print(query)
+    # get results
+    try:
+        payload = json.dumps({
+            "query": query,
+            "no_results": number_of_responses_for_genai
+        })
+        headers = {
+            "Content-Type":"application/json"
+        }
+        print(payload)
+        print(headers)
+        response = requests.request("POST", url, headers=headers, data=payload, verify=False)
+
+        print(response.text)
+
+        result = response.text
+    except Exception as e:
+        return {'error': str(e)}
+
+    return result 
+
+# code that adds an original query to the received top 3 answers and sends the data to watsonx.ai with the custom prompt
+def augment_chroma(query, response_retriver):
+    #check if there are any answers, if no return empty
+    #{"results":{"data":null,"distances":[[0.29149818420410156,0.6023381948471069]],"documents":[["Cleanses are a pack of specific juices that are particularly picked to help the customer with a specific health problem or improve their specific health category.","list the juices and lemonades in the order provided above. - Recommend drinking water or tea between juices or lemonades. - For the Gut Whisperer cleanse, start the first juice at 8 AM and the last lemonade at 8 PM. - The Gut Whisperer cleanse is a specialty cleanse; find it by searching \"gut whisperer well juicery\" and visiting the Well Juicery website. - For other questions, refer to the guide on the Well Juicery website for detailed instructions on consuming the cleanses."]],"embeddings":null,"ids":[["id19","id28"]],"included":["metadatas","documents","distances"],"metadatas":[[{"question":"**Cleanses:**"},{"question":"If asked about the order of taking the cleanses,"}]],"uris":null}}
+    print("response from retriver:")
+    print (response_retriver)
+    if response_retriver is None:
+        return
+    
+    # TODO select top three or n
+    # Add the original query to the received top 3 answers
+
+    # Extract the answer and source from the query result
+    answer = []
+    source = []
+    i = 0
+    response_json=json.loads(response_retriver)
+    for passage in response_json['results']['documents'][0]:
+        print(passage)
+        if i < number_of_responses_for_genai :
+            text1 = passage#[i]
+            print(f"text1 index {i}")
+            print(text1)
+            question_json = response_json['results']['metadatas'][0][i]
+            text2 = question_json["question"]
+            found_answer= text2 + text1
+            answer.append(found_answer)
+            source.append(response_json['results']['ids'][0][i])#passage['document_id'])
+        i=i+1
+        print(f"counter: {i}")
+
+    # Return the answer, and source in a JSON response
+    
+    # TODO reprioritize using some strategy
+    # TODO add query to the response
+    print(answer)
+    return {
+        'answer': answer,
+        'source': source
+    }
+
+
+
+
+
+
+@app.get("/")
+async def root():
+    return {"message": "Hello Mengalo Streaming"}
+
+@app.post('/query-streamed')
+async def stream_response(request:Request):
+    payload_data = await request.json()
+    prompt = payload_data["prompt"].strip()
+    model = payload_data["model"].strip()
+        
+    try:         
+        query = payload_data["query"].strip()
+        model = ModelInference(
+            model_id = MODEL_ID, 
+            params = generate_params, 
+            credentials = credentials,
+            project_id = watsonx_project_id #WX_PROJECT_ID
+        )
+        ### start here
+
+        print("in query method")
+        #data = request.get_json()
+        #if data is None:
+        #    return {"error": "Invalid request, JSON expected"}, 400
+        #query = data.get("query")
+        #project = query = payload_data["project_id"].strip()
+        #if query is None or project is None:
+        #    return {"error": "Missing query or project"}, 400
+        
+        ### get chroma
+        # select chroma vs watson
+        start_retriver_time = time.perf_counter()
+        match retriver_discovery_or_chroma:
+            #case "discovery": 
+            #    response_retriver = retrive(query, project)
+            #    response_augmenter = augment(query, response_retriver)
+            case "chroma":
+                print("in case chroma")
+                response_retriver = retrive_chroma(query, watsonx_project_id)
+                response_augmenter = augment_chroma(query, response_retriver)
+            # use just the text of the document placed in the filesystem
+            case _:
+                response_retriver = retrive_chroma(query, watsonx_project_id)
+                response_augmenter = augment_chroma(query, response_retriver)
+
+        stop_retriver_time = time.perf_counter()
+        retriver_elapsed_time = int((stop_retriver_time - start_retriver_time)*1000)
+        print(f"retrived in: {retriver_elapsed_time} ms")
+        #print(response_augmenter)
+
+        url = api_url
+        i = 0
+        responses = ""
+        for i in range(len(response_augmenter["answer"])):
+
+            responses = responses + f"answer {i+1}: "+ "".join(response_augmenter["answer"][i]) + "source: "+ response_augmenter["source"][i] +"\n"
+        print("my responses**********")
+        print(responses)
+        genai_prompt = f"You are a knowledge worker.  You received the following question:\n{query}\n"
+        genai_prompt2 = f"these are the answers from the knowledge retriver:\n {responses}\n"
+        genai_prompt3 = f"{prompt}\n Answer only with the retrived facts, don't make up an answer. If you don't know the answer - say that you don't know the answer."
+
+        new_prompt = genai_prompt+genai_prompt2+genai_prompt3
+
+        return StreamingResponse(model.generate_text_stream(prompt=new_prompt), media_type="text/event-stream")
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Exception occurred: " + str(e))
