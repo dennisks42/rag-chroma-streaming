@@ -150,7 +150,25 @@ def augment_chroma(query, response_retriver):
     }
 
 
+#suggested filter
+async def event_stream(watonsx_model: Model, llm_input, citation):
+    start_gen_time = time.perf_counter()
+    count = 0
+    async for chunk in watonsx_model.generate_text_stream(prompt=llm_input, raw_response=True):
+        json_data = json.dumps(chunk)
 
+        if count == 0:
+            duration = int((time.perf_counter() - start_gen_time)*1000)
+            print(f"Time taken for FIRST TOKEN: {duration}")
+        count += 1
+
+        if citation is not None and chunk["results"][0]["stop_reason"] == "eos_token":
+            duration = int((time.perf_counter() - start_gen_time)*1000)
+            print(f"Time taken for last token: {duration}")
+            chunk["results"][0]["generated_text"] += citation
+            json_data = json.dumps(chunk)
+
+        yield f"data: {json_data}\n\n"  # SSE format
 
 
 
@@ -218,7 +236,13 @@ async def stream_response(request:Request):
 
         new_prompt = genai_prompt+genai_prompt2+genai_prompt3
 
-        return StreamingResponse(model.generate_text_stream(prompt=new_prompt), media_type="text/event-stream")
+        #original return - no event-stream
+        #return StreamingResponse(model.generate_text_stream(prompt=new_prompt), media_type="text/event-stream")
+
+        # responses is a candidate for citation
+        return StreamingResponse(event_stream (model, new_prompt, ""), media_type="text/event-stream")
         
     except Exception as e:
         raise HTTPException(status_code=500, detail="Exception occurred: " + str(e))
+    
+    
