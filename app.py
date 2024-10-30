@@ -237,10 +237,10 @@ async def stream_response(request:Request):
         new_prompt = genai_prompt+genai_prompt2+genai_prompt3
 
         #original return - no event-stream
-        #return StreamingResponse(model.generate_text_stream(prompt=new_prompt), media_type="text/event-stream")
+        return StreamingResponse(model.generate_text_stream(prompt=new_prompt, raw_response=True), media_type="text/event-stream")
 
         # responses is a candidate for citation
-        return StreamingResponse(event_stream (model, new_prompt, ""), media_type="text/event-stream")
+        #return StreamingResponse(event_stream (model, new_prompt, ""), media_type="text/event-stream")
         
     except Exception as e:
         raise HTTPException(status_code=500, detail="Exception occurred: " + str(e))
