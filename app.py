@@ -184,7 +184,8 @@ async def stream_response(request:Request):
         
     try:         
         query = payload_data["query"].strip()
-        model = ModelInference(
+        #model = ModelInference(
+        model = Model(
             model_id = MODEL_ID, 
             params = generate_params, 
             credentials = credentials,
@@ -236,8 +237,9 @@ async def stream_response(request:Request):
 
         new_prompt = genai_prompt+genai_prompt2+genai_prompt3
 
-        #original return - no event-stream
+        #original return - no event-stream - using Model
         return StreamingResponse(model.generate_text_stream(prompt=new_prompt), media_type="text/event-stream")
+        #using Model
         #return StreamingResponse(model.generate_text_stream(prompt=new_prompt, raw_response=True), media_type="text/event-stream")
 
         # responses is a candidate for citation
