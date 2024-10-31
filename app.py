@@ -154,8 +154,10 @@ def augment_chroma(query, response_retriver):
 async def event_stream(watonsx_model: Model, llm_input, citation):
     start_gen_time = time.perf_counter()
     count = 0
-    async for chunk in watonsx_model.generate_text_stream(prompt=llm_input, raw_response=True):
+    # async for chunk in watonsx_model.generate_text_stream(prompt=llm_input, raw_response=True):
+    async for chunk in watonsx_model.generate_text_stream(prompt=llm_input):
         json_data = json.dumps(chunk)
+        print(chunk)
 
         if count == 0:
             duration = int((time.perf_counter() - start_gen_time)*1000)
@@ -238,11 +240,12 @@ async def stream_response(request:Request):
         new_prompt = genai_prompt+genai_prompt2+genai_prompt3
 
         #original return - no event-stream - using Model
-        return StreamingResponse(model.generate_text_stream(prompt=new_prompt), media_type="text/event-stream")
+        #return StreamingResponse(model.generate_text_stream(prompt=new_prompt), media_type="text/event-stream")
         #using Model raw_responses
         #return StreamingResponse(model.generate_text_stream(prompt=new_prompt, raw_response=True), media_type="text/event-stream")
         # responses is a candidate for citation - investigating
         #return StreamingResponse(event_stream (model, new_prompt, ""), media_type="text/event-stream")
+        return StreamingResponse(event_stream (model, new_prompt, ""), media_type="text/event-stream")
         
     except Exception as e:
         raise HTTPException(status_code=500, detail="Exception occurred: " + str(e))
