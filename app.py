@@ -13,16 +13,10 @@ from dotenv import load_dotenv
 import os
 import http.client #token
 import json #token
-
 import requests #chroma
-
-
 import time #measuring the time
 
-
 load_dotenv()  # take environment variables from .env.
-
-
 
 # load the environment variables
 # get the IAM API Key from the environment variable    
@@ -52,17 +46,12 @@ credentials=Credentials(
     api_key = iam_api_key, #WX_API_KEY,
     url = api_url #IBM_CLOUD_URL
     )
-print(credentials)
+#print(credentials)
 
 client=APIClient(credentials)
 client_project = APIClient(credentials, project_id = watsonx_project_id)
 
-
-
 MODEL_ID = model_id #"ibm/granite-8b-code-instruct" #"mistralai/mixtral-8x7b-instruct-v01"
-
-
-
 
 # Initialize the app and add CORS middleware
 app = FastAPI()
@@ -84,9 +73,9 @@ def retrive_chroma(query, project_id):
 
     # pick the url by project_id use-case
 
-    print("in retriver:")
+    print("in retriver")
     # connect to the container
-    print(query)
+    #print(query)
     # get results
     try:
         payload = json.dumps({
@@ -96,11 +85,11 @@ def retrive_chroma(query, project_id):
         headers = {
             "Content-Type":"application/json"
         }
-        print(payload)
-        print(headers)
+        #print(payload)
+        #print(headers)
         response = requests.request("POST", url, headers=headers, data=payload, verify=False)
 
-        print(response.text)
+        #print(response.text)
 
         result = response.text
     except Exception as e:
@@ -112,8 +101,8 @@ def retrive_chroma(query, project_id):
 def augment_chroma(query, response_retriver):
     #check if there are any answers, if no return empty
     #{"results":{"data":null,"distances":[[0.29149818420410156,0.6023381948471069]],"documents":[["Cleanses are a pack of specific juices that are particularly picked to help the customer with a specific health problem or improve their specific health category.","list the juices and lemonades in the order provided above. - Recommend drinking water or tea between juices or lemonades. - For the Gut Whisperer cleanse, start the first juice at 8 AM and the last lemonade at 8 PM. - The Gut Whisperer cleanse is a specialty cleanse; find it by searching \"gut whisperer well juicery\" and visiting the Well Juicery website. - For other questions, refer to the guide on the Well Juicery website for detailed instructions on consuming the cleanses."]],"embeddings":null,"ids":[["id19","id28"]],"included":["metadatas","documents","distances"],"metadatas":[[{"question":"**Cleanses:**"},{"question":"If asked about the order of taking the cleanses,"}]],"uris":null}}
-    print("response from retriver:")
-    print (response_retriver)
+    print("response from retriver")
+    #print (response_retriver)
     if response_retriver is None:
         return
     
@@ -126,11 +115,11 @@ def augment_chroma(query, response_retriver):
     i = 0
     response_json=json.loads(response_retriver)
     for passage in response_json['results']['documents'][0]:
-        print(passage)
+        #print(passage)
         if i < number_of_responses_for_genai :
             text1 = passage#[i]
-            print(f"text1 index {i}")
-            print(text1)
+            #print(f"text1 index {i}")
+            #print(text1)
             question_json = response_json['results']['metadatas'][0][i]
             text2 = question_json["question"]
             found_answer= text2 + text1
@@ -151,6 +140,9 @@ def augment_chroma(query, response_retriver):
 
 
 #suggested filter
+# sample output
+# {'model_id': 'ibm/granite-8b-code-instruct', 'model_version': '1.1.0', 'created_at': '2024-10-31T19:14:17.242Z', 'results': [{'generated_text': '\n', 'generated_token_count': 1, 'input_token_count': 0, 'stop_reason': 'not_finished'}]}
+
 async def event_stream(watonsx_model: Model, llm_input, citation):
     start_gen_time = time.perf_counter()
     count = 0
@@ -239,12 +231,6 @@ async def stream_response(request:Request):
 
         new_prompt = genai_prompt+genai_prompt2+genai_prompt3
 
-        #original return - no event-stream - using Model
-        #return StreamingResponse(model.generate_text_stream(prompt=new_prompt), media_type="text/event-stream")
-        #using Model raw_responses
-        #return StreamingResponse(model.generate_text_stream(prompt=new_prompt, raw_response=True), media_type="text/event-stream")
-        # responses is a candidate for citation - investigating
-        #return StreamingResponse(event_stream (model, new_prompt, ""), media_type="text/event-stream")
         return StreamingResponse(event_stream (model, new_prompt, ""), media_type="text/event-stream")
         
     except Exception as e:
