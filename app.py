@@ -174,13 +174,13 @@ async def root():
 async def stream_response(request:Request):
     payload_data = await request.json()
     prompt = payload_data["prompt"].strip()
-    model = payload_data["model"].strip()
+    my_model = payload_data["model"].strip()
         
     try:         
         query = payload_data["query"].strip()
         #model = ModelInference(
         model = Model(
-            model_id = MODEL_ID, 
+            model_id = my_model, 
             params = generate_params, 
             credentials = credentials,
             project_id = watsonx_project_id #WX_PROJECT_ID
