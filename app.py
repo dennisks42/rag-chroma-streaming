@@ -155,7 +155,7 @@ async def event_stream(watonsx_model: Model, llm_input, citation):
     start_gen_time = time.perf_counter()
     count = 0
     # async for chunk in watonsx_model.generate_text_stream(prompt=llm_input, raw_response=True):
-    for chunk in watonsx_model.generate_text_stream(prompt=llm_input):
+    for chunk in watonsx_model.generate_text_stream(prompt=llm_input, raw_response=True):
         json_data = json.dumps(chunk)
         print(chunk)
 
