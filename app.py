@@ -226,10 +226,11 @@ async def stream_response(request:Request):
         print("my responses**********")
         print(responses)
         genai_prompt = f"You are a knowledge worker.  You received the following question:\n{query}\n"
-        genai_prompt2 = f"these are the answers from the knowledge retriver:\n {responses}\n"
-        genai_prompt3 = f"{prompt}\n Answer only with the retrived facts, don't make up an answer. If you don't know the answer - say that you don't know the answer."
+        genai_prompt2 = f"these are the answers from the knowledge retriever:\n {responses}\n"
+        genai_prompt3 = f"{prompt}\n Answer only with the retrieved facts, don't make up an answer. If you don't know the answer - say that you don't know the answer."
+        genai_prompt3_1 = "\n For example. The User asks the following question: 'tell me about green juice'; the expected answer should be the following: ' Our green juice is the WELL GREENS because of its name.  This are the details  on this particular juice - A 6-pack priced at $41.94, with ingredients including apple juice, spinach juice, kale juice, celery juice, lemon juice, and ginger juice. Nutrition facts per 1 bottle : 120 calories, with about or less than 10% daily values of sodium, potassium, calcium, and iron.'"
 
-        new_prompt = genai_prompt+genai_prompt2+genai_prompt3
+        new_prompt = genai_prompt+genai_prompt2+genai_prompt3+genai_prompt3_1
 
         return StreamingResponse(event_stream (model, new_prompt, ""), media_type="text/event-stream")
         
