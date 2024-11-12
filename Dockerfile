@@ -5,13 +5,16 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Install any needed packages
-RUN pip install --no-cache-dir fastapi uvicorn pydantic python-dotenv ibm_watsonx_ai requests
+#RUN pip install --no-cache-dir fastapi uvicorn pydantic python-dotenv ibm_watsonx_ai requests
 
+COPY ./requirements.txt /app
 COPY app.py /app/app.py
-
+RUN cd /app & \
+    pip install -r requirements.txt
 
 # Make port 8000 available to the world outside this container
 EXPOSE 8000
+USER 1001
 
 # Set environment variables for Watsonx API key and URL (to be set at runtime)
 # use in RHOS
