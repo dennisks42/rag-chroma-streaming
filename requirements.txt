@@ -4,3 +4,4 @@ pydantic
 python-dotenv 
 ibm_watsonx_ai 
 requests
+pyarrow

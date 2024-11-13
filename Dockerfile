@@ -1,16 +1,25 @@
 # Use an official Python runtime as a parent image
-FROM python:3.11-slim
+#FROM python:3.11-slim
+FROM registry.access.redhat.com/ubi9/python-312
 
 # Set the working directory in the container
-WORKDIR /app
+#WORKDIR /app
 
 # Install any needed packages
 #RUN pip install --no-cache-dir fastapi uvicorn pydantic python-dotenv ibm_watsonx_ai requests
 
-COPY ./requirements.txt /app
-COPY app.py /app/app.py
-RUN cd /app & \
+COPY ./requirements.txt /opt/app-root/src
+RUN cd /opt/app-root/src & \
     pip install -r requirements.txt
+
+# this will invalidate the image layer - copy files
+COPY . /opt/app-root/src
+
+
+#COPY ./requirements.txt /app
+#COPY app.py /app/app.py
+#RUN cd /app & \
+#    pip install -r requirements.txt
 
 # Make port 8000 available to the world outside this container
 EXPOSE 8000
