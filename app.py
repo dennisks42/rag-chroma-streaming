@@ -232,11 +232,31 @@ async def stream_response(request:Request):
         'tell me about green juice'; 
         the expected answer: 
         ' Our green juice is the WELL GREENS because of its name.  This are the details  on this particular juice - A 6-pack priced at $41.94, with ingredients including apple juice, spinach juice, kale juice, celery juice, lemon juice, and ginger juice 120 calories.'"""
+        
+        genai_prompt4 = f"""
+            You are an AI assistant responsible for answering customer queries accurately and efficiently. You have access to a knowledge retrieval system that provides answers based on a database of pre-approved responses. 
+
+            Your task is to respond to the following customer inquiry:
+            Customer Inquiry:
+
+            Consider the following details when crafting your response:
+            - Ensure the response is clear, informative, and addresses the customer's specific question or concern.
+            - If the query is about a product, include details like product name, description, benefits, ingredients, pricing, and any other relevant specifications.
+            - If the query is about a service or general information, provide clear and concise details about the service, its features, or how to proceed with it.
+            - Use an empathetic and helpful tone. Make sure the response feels personalized and offers useful insights, solutions, or next steps.
+
+            Be mindful of the following:
+            - If the query asks for a product’s nutritional information, provide specific ingredients, calories, and any additional details on benefits.
+            - If the query is about payment or shipping, ensure the response is clear, addressing the process and providing any relevant instructions.
+            - If the customer asks for more general information about your company, focus on values, mission, or product ranges.
+            - If the query is about an issue (e.g., expired products, poor service), offer clear solutions such as refunds, replacements, or escalation to specialists if needed.
+
+            Now, use the following responses from the knowledge retriever as a guide to help you craft your response:'''
 
         genai_prompt3 = f"{prompt}\n Answer only with the retrieved facts, don't make up an answer. If you don't know the answer - say that you don't know the answer."
         
 
-        new_prompt = genai_prompt+genai_prompt2+genai_prompt3_1+genai_prompt3
+        new_prompt = genai_prompt+genai_prompt2+genai_prompt3_1+genai_prompt3+genai_prompt4
 
         return StreamingResponse(event_stream (model, new_prompt, ""), media_type="text/event-stream")
         
