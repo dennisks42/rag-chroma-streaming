@@ -35,9 +35,10 @@ json_chroma_for_wd_project = os.environ["CHROMA_FOR_WD_PROJECT"]
 retriver_chroma_url = os.environ["CHROMA_URL"]
 
 generate_params = {
-    GenParams.MAX_NEW_TOKENS: 3000,
+    GenParams.MAX_NEW_TOKENS: 1000,
     GenParams.DECODING_METHOD: "greedy",
-    GenParams.REPETITION_PENALTY: 1
+    GenParams.REPETITION_PENALTY: 1,
+    GenParams.STOP_SEQUENCES: ["\\n\\n"]
 }
 
 watsonx_project_id=os.environ["WATSONX_PROJECT_ID"]
@@ -227,10 +228,15 @@ async def stream_response(request:Request):
         print(responses)
         genai_prompt = f"You are a knowledge worker.  You received the following question:\n{query}\n"
         genai_prompt2 = f"these are the answers from the knowledge retriever:\n {responses}\n"
-        genai_prompt3 = f"{prompt}\n Answer only with the retrieved facts, don't make up an answer. If you don't know the answer - say that you don't know the answer."
-        genai_prompt3_1 = "\n For example. The User asks the following question: 'tell me about green juice'; the expected answer should be the following: ' Our green juice is the WELL GREENS because of its name.  This are the details  on this particular juice - A 6-pack priced at $41.94, with ingredients including apple juice, spinach juice, kale juice, celery juice, lemon juice, and ginger juice. Nutrition facts per 1 bottle : 120 calories, with about or less than 10% daily values of sodium, potassium, calcium, and iron.'"
+        genai_prompt3_1 = """\n For example. The User asks the following question: 
+        'tell me about green juice'; 
+        the expected answer: 
+        ' Our green juice is the WELL GREENS because of its name.  This are the details  on this particular juice - A 6-pack priced at $41.94, with ingredients including apple juice, spinach juice, kale juice, celery juice, lemon juice, and ginger juice 120 calories.'"""
 
-        new_prompt = genai_prompt+genai_prompt2+genai_prompt3+genai_prompt3_1
+        genai_prompt3 = f"{prompt}\n Answer only with the retrieved facts, don't make up an answer. If you don't know the answer - say that you don't know the answer."
+        
+
+        new_prompt = genai_prompt+genai_prompt2+genai_prompt3_1+genai_prompt3
 
         return StreamingResponse(event_stream (model, new_prompt, ""), media_type="text/event-stream")
         
